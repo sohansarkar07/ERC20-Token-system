@@ -1,6 +1,6 @@
 # MyToken ERC20 Project
 
-🚀 **Live Demo:** [https://erc-20-token-system.vercel.app/](https://erc-20-token-system.vercel.app/)
+ **Live Demo:** [https://erc-20-token-system.vercel.app/](https://erc-20-token-system.vercel.app/)
 A robust ERC20 token project built with Hardhat v2.22.0.
 
 ## Project Structure
