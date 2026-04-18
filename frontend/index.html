@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ERC20 Token Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #0f172a;
+            --card-bg: #1e293b;
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --glass: rgba(255, 255, 255, 0.03);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 450px;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--glass-border);
+            backdrop-filter: blur(12px);
+        }
+
+        h1 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #818cf8, #c084fc);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        p.subtitle {
+            color: var(--text-dim);
+            font-size: 0.875rem;
+            margin-bottom: 2rem;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--glass);
+            padding: 1rem;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.25rem;
+        }
+
+        .stat-value {
+            font-size: 1.125rem;
+            font-weight: 600;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.875rem;
+            border-radius: 12px;
+            border: none;
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        .btn:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-dim);
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: var(--bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            color: white;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+        }
+
+        .status {
+            margin-top: 1.5rem;
+            padding: 0.75rem;
+            border-radius: 12px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            font-size: 0.875rem;
+            color: #34d399;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Token Dashboard</h1>
+        <p class="subtitle">Manage your MTK assets securely.</p>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Balance</div>
+                <div id="balance" class="stat-value">0.00 MTK</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Network</div>
+                <div id="network" class="stat-value">Not Connected</div>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="address">Recipient Address</label>
+            <input type="text" id="address" placeholder="0x...">
+        </div>
+
+        <div class="input-group">
+            <label for="amount">Amount</label>
+            <input type="number" id="amount" placeholder="0.0">
+        </div>
+
+        <button id="connectBtn" class="btn">Connect Wallet</button>
+        <button id="sendBtn" class="btn" style="display: none; margin-top: 0.5rem;">Send Tokens</button>
+
+        <div id="statusBox" class="status"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script>
+        const connectBtn = document.getElementById('connectBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const statusBox = document.getElementById('statusBox');
+        const balanceEl = document.getElementById('balance');
+        const networkEl = document.getElementById('network');
+
+        const NETWORK_NAMES = {
+            1: 'Ethereum',
+            5: 'Goerli',
+            11155111: 'Sepolia',
+            137: 'Polygon',
+            80001: 'Mumbai',
+            56: 'BSC',
+            42161: 'Arbitrum',
+            10: 'Optimism',
+            31337: 'Hardhat',
+        };
+
+        function showStatus(msg, isError = false) {
+            statusBox.innerText = msg;
+            statusBox.style.display = 'block';
+            statusBox.style.color = isError ? '#f87171' : '#34d399';
+            statusBox.style.background = isError ? 'rgba(248,113,113,0.1)' : 'rgba(16,185,129,0.1)';
+        }
+ 
+        const contractAddress = "0xc5D2f049eff9274b3200b936FFAbf00E6B11a6f3";
+        
+        const erc20Abi = [
+            "function balanceOf(address owner) view returns (uint256)",
+            "function decimals() view returns (uint8)",
+            "function symbol() view returns (string)",
+            "function transfer(address to, uint amount) returns (bool)"
+        ];
+
+        async function updateDashboard() {
+            if (!window.ethereum) return;
+            const provider = new ethers.providers.Web3Provider(window.ethereum);
+            const network = await provider.getNetwork();
+            const chainId = network.chainId;
+            networkEl.textContent = NETWORK_NAMES[chainId] || `Chain ${chainId}`;
+
+            const accounts = await provider.listAccounts();
+            if (accounts.length > 0) {
+                const account = accounts[0];
+                const contract = new ethers.Contract(contractAddress, erc20Abi, provider);
+
+                try {
+                    const balance = await contract.balanceOf(account);
+                    const decimals = await contract.decimals();
+                    const symbol = await contract.symbol();
+
+                    const formatted = ethers.utils.formatUnits(balance, decimals);
+                    balanceEl.textContent = `${parseFloat(formatted).toFixed(2)} ${symbol}`;
+                } catch (e) {
+                   
+                    const ethBalance = await provider.getBalance(account);
+                    const formattedEth = parseFloat(ethers.utils.formatEther(ethBalance)).toFixed(4);
+                    balanceEl.textContent = `${formattedEth} ETH`;
+                    console.log("Could not fetch ERC20 balance. Network might be wrong.", e);
+                }
+            }
+        }
+
+        const TARGET_CHAIN_ID = '0xaa36a7'; 
+        const TARGET_CHAIN_INT = 11155111;
+
+        async function switchNetwork() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: TARGET_CHAIN_ID }],
+                });
+            } catch (error) {
+              
+                if (error.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: TARGET_CHAIN_ID,
+                                chainName: 'Sepolia Testnet',
+                                rpcUrls: ['https://rpc.sepolia.org'],
+                                nativeCurrency: {
+                                    name: 'Sepolia ETH',
+                                    symbol: 'SEP',
+                                    decimals: 18
+                                },
+                                blockExplorerUrls: ['https://sepolia.etherscan.io']
+                            }],
+                        });
+                    } catch (addError) {
+                        console.error('Failed to add network:', addError);
+                    }
+                }
+            }
+        }
+
+        connectBtn.onclick = async () => {
+            if (window.ethereum) {
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+                   
+                    const provider = new ethers.providers.Web3Provider(window.ethereum);
+                    const network = await provider.getNetwork();
+                    if (network.chainId !== TARGET_CHAIN_INT) {
+                        await switchNetwork();
+                    }
+
+                    connectBtn.style.display = 'none';
+                    sendBtn.style.display = 'block';
+                    await updateDashboard();
+                    showStatus('Wallet Connected & Configured!');
+                } catch (err) {
+                    showStatus(err.message, true);
+                }
+            } else {
+                alert('Please install MetaMask!');
+            }
+        };
+
+        sendBtn.onclick = async () => {
+            const to = document.getElementById('address').value;
+            const amount = document.getElementById('amount').value;
+            if (!to || !amount) return showStatus('Fill in all fields.', true);
+            try {
+                const provider = new ethers.providers.Web3Provider(window.ethereum);
+                const signer = provider.getSigner();
+
+                const network = await provider.getNetwork();
+                if (network.chainId !== TARGET_CHAIN_INT) {
+                    throw new Error("Wrong network! Please connect to Sepolia Testnet.");
+                }
+
+                const contract = new ethers.Contract(contractAddress, erc20Abi, signer);
+
+                const decimals = await contract.decimals();
+                const parsedAmount = ethers.utils.parseUnits(amount, decimals);
+
+                const tx = await contract.transfer(to, parsedAmount);
+                showStatus(`Tx sent: ${tx.hash.slice(0, 10)}...`);
+                await tx.wait();
+                showStatus('Transfer confirmed!');
+                await updateDashboard();
+            } catch (err) {
+                showStatus(err.message, true);
+            }
+        };
+
+     
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', updateDashboard);
+            window.ethereum.on('chainChanged', () => window.location.reload());
+        }
+    </script>
+</body>
+
+</html>
