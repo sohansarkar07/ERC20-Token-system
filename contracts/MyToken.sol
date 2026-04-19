@@ -1,14 +1,112 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
+contract MyToken {
 
-contract MyToken is ERC20, Ownable {
-    constructor(uint256 initialSupply) ERC20("MyToken", "MTK") Ownable(msg.sender) {
-        _mint(msg.sender, initialSupply * 10 ** decimals());
+    // ─── State Variables ───────────────────
+    
+    string public name     = "MyToken";
+    string public symbol   = "MTK";
+    uint8  public decimals = 18;
+    uint256 public totalSupply;
+    address public owner;
+
+    // ─── Storage ───────────────────────────
+
+    // who owns how many tokens
+    mapping(address => uint256) public balanceOf;
+    
+    // who allowed who to spend how much
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    // ─── Events ────────────────────────────
+
+    event Transfer(address indexed from, address indexed to, uint256 value);
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+
+    // ─── Modifiers ─────────────────────────
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not owner");
+        _;
     }
 
-    function mint(address to, uint256 amount) public onlyOwner {
-        _mint(to, amount);
+    // ─── Constructor ───────────────────────
+
+    constructor(uint256 initialSupply) {
+        owner = msg.sender;
+        totalSupply = initialSupply * 10 ** decimals;
+        balanceOf[msg.sender] = totalSupply;
+        emit Transfer(address(0), msg.sender, totalSupply);
+    }
+
+    // ─── Core Functions ────────────────────
+
+    function transfer(address to, uint256 amount) 
+        public returns (bool) 
+    {
+        require(to != address(0),             "Zero address");
+        require(balanceOf[msg.sender] >= amount, "Not enough balance");
+
+        balanceOf[msg.sender] -= amount;
+        balanceOf[to]         += amount;
+
+        emit Transfer(msg.sender, to, amount);
+        return true;
+    }
+
+    function approve(address spender, uint256 amount) 
+        public returns (bool) 
+    {
+        require(spender != address(0), "Zero address");
+
+        allowance[msg.sender][spender] = amount;
+
+        emit Approval(msg.sender, spender, amount);
+        return true;
+    }
+
+    function transferFrom(address from, address to, uint256 amount)
+        public returns (bool)
+    {
+        require(to != address(0),              "Zero address");
+        require(balanceOf[from] >= amount,     "Not enough balance");
+        require(allowance[from][msg.sender] >= amount, "Not enough allowance");
+
+        allowance[from][msg.sender] -= amount;
+        balanceOf[from]             -= amount;
+        balanceOf[to]               += amount;
+
+        emit Transfer(from, to, amount);
+        return true;
+    }
+
+    // ─── Owner Functions ───────────────────
+
+    function mint(address to, uint256 amount) 
+        public onlyOwner 
+    {
+        require(to != address(0), "Zero address");
+
+        totalSupply   += amount;
+        balanceOf[to] += amount;
+
+        emit Transfer(address(0), to, amount);
+    }
+
+    function burn(uint256 amount) public {
+        require(balanceOf[msg.sender] >= amount, "Not enough balance");
+
+        balanceOf[msg.sender] -= amount;
+        totalSupply           -= amount;
+
+        emit Transfer(msg.sender, address(0), amount);
+    }
+
+    function transferOwnership(address newOwner) 
+        public onlyOwner 
+    {
+        require(newOwner != address(0), "Zero address");
+        owner = newOwner;
     }
 }
