@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 contract MyToken {
 
-    // ─── State Variables ───────────────────
+    
     
     string public name     = "MyToken";
     string public symbol   = "MTK";
@@ -11,27 +11,26 @@ contract MyToken {
     uint256 public totalSupply;
     address public owner;
 
-    // ─── Storage ───────────────────────────
 
-    // who owns how many tokens
+
+    
     mapping(address => uint256) public balanceOf;
     
-    // who allowed who to spend how much
+    
     mapping(address => mapping(address => uint256)) public allowance;
 
-    // ─── Events ────────────────────────────
+    
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
 
-    // ─── Modifiers ─────────────────────────
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Not owner");
         _;
     }
 
-    // ─── Constructor ───────────────────────
+    
 
     constructor(uint256 initialSupply) {
         owner = msg.sender;
@@ -40,7 +39,7 @@ contract MyToken {
         emit Transfer(address(0), msg.sender, totalSupply);
     }
 
-    // ─── Core Functions ────────────────────
+    
 
     function transfer(address to, uint256 amount) 
         public returns (bool) 
@@ -81,7 +80,7 @@ contract MyToken {
         return true;
     }
 
-    // ─── Owner Functions ───────────────────
+    
 
     function mint(address to, uint256 amount) 
         public onlyOwner 
