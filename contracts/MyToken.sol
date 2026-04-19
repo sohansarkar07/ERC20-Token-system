@@ -12,7 +12,6 @@ contract MyToken {
     address public owner;
 
 
-
     
     mapping(address => uint256) public balanceOf;
     
